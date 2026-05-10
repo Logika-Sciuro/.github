@@ -1,27 +1,24 @@
 ---
-name: Feature request
-about: Sugira uma melhoria ou nova funcionalidade
-title: "[Feature] "
-labels: enhancement
+name: Feature Request
+about: Propor uma nova funcionalidade, componente ou evolução arquitetural para a plataforma.
+title: 'feat: [Módulo] Breve descrição'
+labels: 'type: feature'
 assignees: ''
 ---
 
-## Objetivo
+## 🎯 Contexto e Visão Geral
+<!-- Qual problema estamos resolvendo com essa feature? Qual o valor agregado para o ecossistema Zero-Knowledge? -->
 
-Descreva a funcionalidade desejada.
+## 📐 Proposta de Arquitetura / Solução Técnica
+<!-- Descreva como essa feature será implementada. Envolve mudanças no Caminho Quente (gRPC) ou no Caminho Frio (Kafka/DynamoDB)? -->
 
-## Problema atual
+## 🚦 Critérios de Aceite (Definition of Done)
+<!-- Liste de forma objetiva o que precisa acontecer para essa feature ser considerada pronta. -->
+- [ ] Critério 1
+- [ ] Critério 2
 
-Qual problema ou limitação motivou esta solicitação?
+## 🧪 Estratégia de Automação e Qualidade (QA Framework)
+<!-- Como essa funcionalidade será validada dentro do framework de E2E? Requer atualização no componente Mass Reader ou suporta execução paralela? -->
 
-## Solução proposta
-
-Descreva a solução desejada.
-
-## Alternativas consideradas
-
-Liste alternativas, se houver.
-
-## Contexto adicional
-
-Links, referências e impactos esperados.
+## 🔗 Dependências
+<!-- Essa feature bloqueia ou é bloqueada por PRs em outros repositórios? (ex: contratos .proto) -->
