@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: List repositories
         id: list-repos
@@ -23,7 +23,7 @@ jobs:
 
       - name: Sync templates to all repositories
         env:
-          GH_TOKEN: ${{ secrets.ORG_SYNC_TOKEN != '' && secrets.ORG_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ORG_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           REPOS="${{ steps.list-repos.outputs.repositories }}"
           for REPO in $REPOS; do
