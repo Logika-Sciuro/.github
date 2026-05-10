@@ -1,0 +1,38 @@
+name: Sync Issue Templates
+
+on:
+  push:
+    paths:
+      - "ISSUE_TEMPLATE/**"
+
+jobs:
+  sync-templates:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: List repositories
+        id: list-repos
+        run: |
+          repos=$(gh repo list Logika-Sciuro --json name --jq '.[].name')
+          echo "::set-output name=repositories::${repos}"
+
+      - name: Sync templates to all repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPOS="${{ steps.list-repos.outputs.repositories }}"
+          for REPO in $REPOS; do
+            if [ "${REPO}" != ".github" ]; then
+              echo "Syncing templates to $REPO"
+              gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/bug_report.md \
+                -X PUT -f message='Sync bug report template' \
+                -f content=$(base64 ISSUE_TEMPLATE/bug_report.md)
+
+              gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/feature_request.md \
+                -X PUT -f message='Sync feature request template' \
+                -f content=$(base64 ISSUE_TEMPLATE/feature_request.md)
+            fi
+          done
