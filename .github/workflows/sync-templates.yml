@@ -18,7 +18,7 @@ jobs:
       - name: List repositories
         id: list-repos
         run: |
-          repos=$(gh repo list Logika-Sciuro --json name --jq '.[].name')
+          repos=$(gh repo list Logika-Sciuro --json name --jq '.[].name' | tr '\n' ' ')
           echo "repositories=${repos}" >> "$GITHUB_OUTPUT"
 
       - name: Sync templates to all repositories
@@ -29,12 +29,23 @@ jobs:
           for REPO in $REPOS; do
             if [ "${REPO}" != ".github" ]; then
               echo "Syncing templates to $REPO"
-              gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/bug_report.md \
-                -X PUT -f message='Sync bug report template' \
-                -f content=$(base64 -w0 .github/ISSUE_TEMPLATE/bug_report.md)
+              for TEMPLATE in bug_report.md feature_request.md; do
+                TEMPLATE_PATH=".github/ISSUE_TEMPLATE/${TEMPLATE}"
+                CONTENT=$(base64 "${TEMPLATE_PATH}" | tr -d '\n')
+                SHA=$(gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" --jq '.sha' 2>/dev/null || true)
 
-              gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/feature_request.md \
-                -X PUT -f message='Sync feature request template' \
-                -f content=$(base64 -w0 .github/ISSUE_TEMPLATE/feature_request.md)
+                if [ -n "${SHA}" ]; then
+                  gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" \
+                    -X PUT \
+                    -f message="Sync ${TEMPLATE}" \
+                    -f content="${CONTENT}" \
+                    -f sha="${SHA}"
+                else
+                  gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" \
+                    -X PUT \
+                    -f message="Sync ${TEMPLATE}" \
+                    -f content="${CONTENT}"
+                fi
+              done
             fi
           done
