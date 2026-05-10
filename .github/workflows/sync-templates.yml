@@ -23,6 +23,7 @@ jobs:
 
       - name: Sync templates to all repositories
         env:
+          # ORG_SYNC_TOKEN must be able to update contents in the target repositories.
           GH_TOKEN: ${{ secrets.ORG_SYNC_TOKEN }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
