@@ -9,7 +9,6 @@ Este repositório centraliza arquivos padrão e templates compartilhados entre o
 - `.github/pull_request_template.md` — template padrão de pull request
 - `.github/ISSUE_TEMPLATE/bug_report.md` — template de bug report
 - `.github/ISSUE_TEMPLATE/feature_request.md` — template de solicitação de funcionalidade
-- `.github/workflows/sync-templates.yml` — automação de sincronização dos templates
 
 ## Objetivo
 
