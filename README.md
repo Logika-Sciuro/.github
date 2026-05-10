@@ -16,7 +16,7 @@ Padronizar colaboração, revisão e documentação entre todos os projetos da o
 
 ## Exemplo: criação de milestones
 
-### Sessão de demonstração 1 — GitHub CLI (`gh`)
+### Seção de demonstração 1 — GitHub CLI (`gh`)
 
 ```bash
 REPO="Logika-Sciuro/scavenger-infra-as-code"
@@ -26,7 +26,7 @@ gh api repos/$REPO/milestones \
   -f state='open'
 ```
 
-### Pré-requisito (antes da próxima sessão)
+### Pré-requisito (antes da próxima seção)
 
 Para criar milestones, a autenticação usada no `gh` ou na API precisa ter permissão de escrita em issues do repositório (ex.: escopo `repo` para repositórios privados).  
 Se necessário, reautentique com:
@@ -36,12 +36,12 @@ gh auth login
 gh auth status
 ```
 
-### Sessão de demonstração 2 — API REST diretamente (`curl`)
+### Seção de demonstração 2 — API REST diretamente (`curl`)
 
 ```bash
 OWNER="Logika-Sciuro"
 REPO="scavenger-infra-as-code"
-TOKEN="<SEU_TOKEN>"
+TOKEN="${GITHUB_TOKEN:?defina GITHUB_TOKEN no ambiente}"
 
 curl -L -X POST \
   -H "Accept: application/vnd.github+json" \
@@ -50,3 +50,5 @@ curl -L -X POST \
   "https://api.github.com/repos/$OWNER/$REPO/milestones" \
   -d '{"title":"Caminho Quente (Multiplexação gRPC)","state":"open"}'
 ```
+
+> Nunca versione tokens em arquivos do repositório. Use variável de ambiente ou gerenciador de segredos.
