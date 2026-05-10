@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Reportar Problema Geral
+    url: https://github.com/Logika-Sciuro/.github/issues
+    about: Use este link para relatar problemas gerais no contexto da organizacao.
