@@ -19,7 +19,7 @@ Padronizar colaboração, revisão e documentação entre todos os projetos da o
 ### Seção de demonstração 1 — GitHub CLI (`gh`)
 
 ```bash
-REPO="Logika-Sciuro/scavenger-infra-as-code"
+REPO="<OWNER/REPO>"
 gh api repos/$REPO/milestones \
   --method POST \
   -f title='Fundação & Mocking Criptográfico' \
@@ -39,8 +39,8 @@ gh auth status
 ### Seção de demonstração 2 — API REST diretamente (`curl`)
 
 ```bash
-OWNER="Logika-Sciuro"
-REPO="scavenger-infra-as-code"
+OWNER="<OWNER>"
+REPO="<REPO>"
 TOKEN="${GITHUB_TOKEN:?defina GITHUB_TOKEN no ambiente}"
 
 curl -L -X POST \
