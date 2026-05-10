@@ -8,6 +8,8 @@ on:
 jobs:
   sync-templates:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Check out repository
@@ -17,7 +19,7 @@ jobs:
         id: list-repos
         run: |
           repos=$(gh repo list Logika-Sciuro --json name --jq '.[].name')
-          echo "::set-output name=repositories::${repos}"
+          echo "repositories=${repos}" >> "$GITHUB_OUTPUT"
 
       - name: Sync templates to all repositories
         env:
