@@ -23,8 +23,13 @@ jobs:
 
       - name: Sync templates to all repositories
         env:
-          GH_TOKEN: ${{ secrets.ORG_SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ORG_SYNC_TOKEN }}
         run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "ORG_SYNC_TOKEN secret is required to sync templates across repositories." >&2
+            exit 1
+          fi
+
           REPOS="${{ steps.list-repos.outputs.repositories }}"
           for REPO in $REPOS; do
             if [ "${REPO}" != ".github" ]; then
@@ -34,15 +39,14 @@ jobs:
                 CONTENT=$(base64 "${TEMPLATE_PATH}" | tr -d '\n')
                 SHA=""
 
-                if ! SHA=$(gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" --jq '.sha' 2>gh-error.log); then
-                  if ! grep -q "404" gh-error.log; then
-                    cat gh-error.log >&2
-                    rm -f gh-error.log
+                if ! SHA=$(gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" --jq '.sha' 2>&1); then
+                  if [[ "${SHA}" != *"404"* ]]; then
+                    printf '%s\n' "${SHA}" >&2
                     exit 1
                   fi
-                fi
 
-                rm -f gh-error.log
+                  SHA=""
+                fi
 
                 if [ -n "${SHA}" ]; then
                   gh api "repos/Logika-Sciuro/${REPO}/contents/${TEMPLATE_PATH}" \
