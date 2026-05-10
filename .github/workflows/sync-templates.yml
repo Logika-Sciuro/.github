@@ -31,10 +31,10 @@ jobs:
               echo "Syncing templates to $REPO"
               gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/bug_report.md \
                 -X PUT -f message='Sync bug report template' \
-                -f content=$(base64 .github/ISSUE_TEMPLATE/bug_report.md)
+                -f content=$(base64 -w0 .github/ISSUE_TEMPLATE/bug_report.md)
 
               gh api repos/Logika-Sciuro/$REPO/contents/.github/ISSUE_TEMPLATE/feature_request.md \
                 -X PUT -f message='Sync feature request template' \
-                -f content=$(base64 .github/ISSUE_TEMPLATE/feature_request.md)
+                -f content=$(base64 -w0 .github/ISSUE_TEMPLATE/feature_request.md)
             fi
           done
