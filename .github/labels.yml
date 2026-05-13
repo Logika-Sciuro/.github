@@ -1,7 +1,44 @@
-- name: bug
-  color: d73a4a
-  description: Problema ou comportamento incorreto
+# ==========================================
+# Labels de Tipagem (Natureza do Trabalho)
+# ==========================================
+- name: 'type: feature'
+  color: '0E8A16'
+  description: 'Nova funcionalidade de negócio ou componente arquitetural'
 
-- name: "type: feature"
-  color: a2eeef
-  description: Nova funcionalidade, componente ou evolução arquitetural
+- name: 'type: chore'
+  color: 'D93F0B'
+  description: 'Configurações, refatorações invisíveis e manutenção técnica'
+
+- name: 'type: test-automation'
+  color: '1D76DB'
+  description: 'Componentes estruturais de QA, automação E2E e Mass Reader'
+
+- name: 'type: bug'
+  color: 'D73A4A'
+  description: 'Comportamento incorreto na arquitetura ou regra de negócio'
+
+- name: 'type: docs'
+  color: '0075CA'
+  description: 'Melhorias ou adições na documentação (DAS, READMEs)'
+
+# ==========================================
+# Labels de Prioridade
+# ==========================================
+- name: 'priority: high'
+  color: 'B60205'
+  description: 'Bloqueante para outras entregas ou incidente crítico'
+
+- name: 'priority: medium'
+  color: 'FBCA04'
+  description: 'Prioridade normal de desenvolvimento'
+
+# ==========================================
+# Labels de Estado (Úteis para Polyrepo)
+# ==========================================
+- name: 'status: blocked'
+  color: '000000'
+  description: 'Trabalho travado devido a dependência em outro repositório'
+
+- name: 'status: needs-review'
+  color: 'F9D0C4'
+  description: 'Pull Request aguardando aprovação técnica cruzada'
