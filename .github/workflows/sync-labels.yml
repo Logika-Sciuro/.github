@@ -1,0 +1,43 @@
+name: Sync Repository Labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/labels.yml'
+  # O gatilho abaixo permite que você rode a sincronização manualmente no painel de Actions
+  workflow_dispatch: 
+
+jobs:
+  sync-labels:
+    runs-on: ubuntu-latest
+    strategy:
+      # O fail-fast como false garante que se a action falhar em um repo (ex: falta de permissão), 
+      # ela continue tentando sincronizar os outros.
+      fail-fast: false 
+      matrix:
+        repo: 
+          - scavenger-infra-as-code
+          - scavenger-core-gateway
+          - scavenger-cv-engine
+          - scavenger-e2e-framework
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Sync Labels in ${{ matrix.repo }}
+        uses: EndBug/label-sync@v2
+        with:
+          config-file: .github/labels.yml
+          
+          # ATENÇÃO: Substitua 'nome-da-sua-org' pelo usuário ou org real no GitHub
+          repository: nome-da-sua-org/${{ matrix.repo }}
+          
+          # O token precisa ter permissão de escrita nos repositórios da matriz
+          token: ${{ secrets.ORG_PAT }}
+          
+          # Se 'true', apaga labels existentes no repositório que não estejam no labels.yml.
+          # Se 'false', ele apenas cria/atualiza as novas e ignora as nativas antigas.
+          delete-other-labels: true
