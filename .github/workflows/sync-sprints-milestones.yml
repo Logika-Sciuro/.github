@@ -22,7 +22,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Criar Milestones da PoC via GitHub CLI
+      - name: Create PoC Milestones via GitHub CLI
         env:
           GH_TOKEN: ${{ secrets.ORG_PAT }}
           REPO: Logika-Sciuro/${{ matrix.repo }}
@@ -36,7 +36,7 @@ jobs:
           for MILESTONE in "${MILESTONES[@]}"; do
             IFS='|' read -r TITLE DUE_DATE DESC <<< "$MILESTONE"
 
-            echo "Avaliando milestone: '$TITLE' em $REPO..."
+            echo "Evaluating milestone: '$TITLE' in $REPO..."
 
             gh api \
               --method POST \
