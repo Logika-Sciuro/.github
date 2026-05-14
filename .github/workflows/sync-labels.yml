@@ -36,7 +36,7 @@ jobs:
           repository: nome-da-sua-org/${{ matrix.repo }}
           
           # O token precisa ter permissão de escrita nos repositórios da matriz
-          token: ${{ secrets.ORG_PAT }}
+          token: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           
           # Se 'true', apaga labels existentes no repositório que não estejam no labels.yml.
           # Se 'false', ele apenas cria/atualiza as novas e ignora as nativas antigas.
