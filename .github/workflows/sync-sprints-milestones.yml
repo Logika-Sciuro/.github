@@ -17,7 +17,6 @@ jobs:
           - scavenger-core-gateway
           - scavenger-cv-engine
           - scavenger-e2e-framework
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
