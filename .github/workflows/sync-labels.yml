@@ -9,8 +9,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
-
+  contents: write
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
