@@ -1,0 +1,49 @@
+name: Sync Sprints (Milestones)
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  sync-milestones:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - scavenger-infra-as-code
+          - scavenger-core-gateway
+          - scavenger-cv-engine
+          - scavenger-e2e-framework
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Criar Milestones da PoC via GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.ORG_PAT }}
+          REPO: Logika-Sciuro/${{ matrix.repo }}
+        run: |
+          MILESTONES=(
+            "Sprint 1 - Fundação & Mocking Criptográfico|2026-05-21T23:59:59Z|Estabelecer a infraestrutura local e o motor de injeção criptográfica"
+            "Sprint 2 - Caminho Quente (Multiplexação gRPC)|2026-05-28T23:59:59Z|Orquestrar o fluxo síncrono de entrada e validação gRPC"
+            "Sprint 3 - Caminho Frio & Validação E2E|2026-06-04T23:59:59Z|Provar a resiliência da arquitetura sob carga maciça e integração paralela do framework de QA"
+          )
+
+          for MILESTONE in "${MILESTONES[@]}"; do
+            IFS='|' read -r TITLE DUE_DATE DESC <<< "$MILESTONE"
+
+            echo "Avaliando milestone: '$TITLE' em $REPO..."
+
+            gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              /repos/$REPO/milestones \
+              -f title="$TITLE" \
+              -f state="open" \
+              -f description="$DESC" \
+              -f due_on="$DUE_DATE" || true
+          done
