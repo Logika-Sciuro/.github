@@ -27,6 +27,5 @@ jobs:
         uses: EndBug/label-sync@v2
         with:
           source-repo: Logika-Sciuro/.github
-          target-repo: Logika-Sciuro/${{ matrix.repo }}
           token: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           delete-other-labels: true
