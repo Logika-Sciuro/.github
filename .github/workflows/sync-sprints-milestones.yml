@@ -24,7 +24,7 @@ jobs:
 
       - name: Create PoC Milestones via GitHub CLI
         env:
-          GH_TOKEN: ${{ secrets.ORG_PAT }}
+          GH_TOKEN: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           REPO: Logika-Sciuro/${{ matrix.repo }}
         run: |
           FAILED=0
