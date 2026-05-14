@@ -27,6 +27,8 @@ jobs:
           GH_TOKEN: ${{ secrets.ORG_PAT }}
           REPO: Logika-Sciuro/${{ matrix.repo }}
         run: |
+          FAILED=0
+
           MILESTONES=(
             "Sprint 1 - Fundação & Mocking Criptográfico|2026-05-21T23:59:59Z|Estabelecer a infraestrutura local e o motor de injeção criptográfica"
             "Sprint 2 - Caminho Quente (Multiplexação gRPC)|2026-05-28T23:59:59Z|Orquestrar o fluxo síncrono de entrada e validação gRPC"
@@ -38,12 +40,22 @@ jobs:
 
             echo "Evaluating milestone: '$TITLE' in $REPO..."
 
-            gh api \
+            if gh api --paginate "/repos/$REPO/milestones?state=all&per_page=100" | jq -e --arg title "$TITLE" '.[] | select(.title == $title)' >/dev/null; then
+              echo "Milestone '$TITLE' already exists in $REPO. Skipping."
+              continue
+            fi
+
+            if ! gh api \
               --method POST \
               -H "Accept: application/vnd.github+json" \
               /repos/$REPO/milestones \
               -f title="$TITLE" \
               -f state="open" \
               -f description="$DESC" \
-              -f due_on="$DUE_DATE" || true
+              -f due_on="$DUE_DATE"; then
+              echo "::error::Failed to create milestone '$TITLE' in $REPO."
+              FAILED=1
+            fi
           done
+
+          exit $FAILED
