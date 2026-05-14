@@ -30,4 +30,4 @@ jobs:
           source-repo: Logika-Sciuro/.github
           target-repo: Logika-Sciuro/${{ matrix.repo }}
           token: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
-          delete-other-labels: false
+          delete-other-labels: true
