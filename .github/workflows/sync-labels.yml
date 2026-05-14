@@ -7,7 +7,7 @@ on:
     paths:
       - '.github/labels.yml'
   # O gatilho abaixo permite que você rode a sincronização manualmente no painel de Actions
-  workflow_dispatch: 
+  workflow_dispatch: {}
 
 permissions:
   contents: read
