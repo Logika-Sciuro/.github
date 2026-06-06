@@ -9,7 +9,9 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
+  issues: write
+
 jobs:
   sync-labels:
     runs-on: ubuntu-latest
@@ -23,9 +25,40 @@ jobs:
           - scavenger-e2e-framework
 
     steps:
-      - name: Sync Labels in ${{ matrix.repo }}
-        uses: EndBug/label-sync@v2
-        with:
-          source-repo: Logika-Sciuro/.github
-          token: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
-          delete-other-labels: true
+      - name: Sync labels in ${{ matrix.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
+          SOURCE_REPO: Logika-Sciuro/.github
+          TARGET_REPO: Logika-Sciuro/${{ matrix.repo }}
+        run: |
+          set -euo pipefail
+
+          echo "Cloning labels from $SOURCE_REPO to $TARGET_REPO..."
+          gh label clone "$SOURCE_REPO" --repo "$TARGET_REPO" --force
+
+          SOURCE_LABELS="$(gh api --paginate "/repos/$SOURCE_REPO/labels?per_page=100")"
+          TARGET_LABELS="$(gh api --paginate "/repos/$TARGET_REPO/labels?per_page=100")"
+
+          EXTRA_LABELS="$(
+            jq -r \
+              --argjson source "$SOURCE_LABELS" \
+              '([ $source[].name ] | unique) as $sourceNames
+               | [ .[].name | select(. as $label | ($sourceNames | index($label) | not)) ]
+               | unique[]
+              ' <<< "$TARGET_LABELS"
+          )"
+
+          if [[ -z "$EXTRA_LABELS" ]]; then
+            echo "No extra labels found in $TARGET_REPO."
+            exit 0
+          fi
+
+          while IFS= read -r label; do
+            [[ -z "$label" ]] && continue
+            encoded="$(jq -rn --arg v "$label" '$v|@uri')"
+            echo "Deleting extra label '$label' in $TARGET_REPO..."
+            gh api \
+              --method DELETE \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$TARGET_REPO/labels/$encoded"
+          done <<< "$EXTRA_LABELS"

@@ -1,10 +1,16 @@
 name: Sync Sprints (Milestones)
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sync-sprints-milestones.yml'
   workflow_dispatch: {}
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   sync-milestones:
@@ -18,14 +24,12 @@ jobs:
           - scavenger-cv-engine
           - scavenger-e2e-framework
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Create PoC Milestones via GitHub CLI
+      - name: Sync PoC milestones via GitHub CLI
         env:
           GH_TOKEN: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           REPO: Logika-Sciuro/${{ matrix.repo }}
         run: |
+          set -euo pipefail
           FAILED=0
 
           MILESTONES=(
@@ -34,13 +38,27 @@ jobs:
             "Sprint 3 - Caminho Frio & Validação E2E|2026-06-04T23:59:59Z|Provar a resiliência da arquitetura sob carga maciça e integração paralela do framework de QA"
           )
 
+          EXISTING_MILESTONES="$(gh api --paginate "/repos/$REPO/milestones?state=all&per_page=100")"
+
           for MILESTONE in "${MILESTONES[@]}"; do
             IFS='|' read -r TITLE DUE_DATE DESC <<< "$MILESTONE"
 
-            echo "Evaluating milestone: '$TITLE' in $REPO..."
+            echo "Synchronizing milestone: '$TITLE' in $REPO..."
 
-            if gh api --paginate "/repos/$REPO/milestones?state=all&per_page=100" | jq -e --arg title "$TITLE" '.[] | select(.title == $title)' >/dev/null; then
-              echo "Milestone '$TITLE' already exists in $REPO. Skipping."
+            MILESTONE_NUMBER="$(jq -r --arg title "$TITLE" '.[] | select(.title == $title) | .number' <<< "$EXISTING_MILESTONES" | head -n 1)"
+
+            if [[ -n "$MILESTONE_NUMBER" ]]; then
+              if ! gh api \
+                --method PATCH \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/$REPO/milestones/$MILESTONE_NUMBER" \
+                -f title="$TITLE" \
+                -f state="open" \
+                -f description="$DESC" \
+                -f due_on="$DUE_DATE"; then
+                echo "::error::Failed to update milestone '$TITLE' in $REPO."
+                FAILED=1
+              fi
               continue
             fi
 
