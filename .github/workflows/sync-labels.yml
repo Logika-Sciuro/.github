@@ -6,23 +6,86 @@ on:
       - main
     paths:
       - '.github/labels.yml'
-  workflow_dispatch: {}
+      - '.github/workflows/sync-labels.yml'
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - sandbox
+          - prod
+        default: sandbox
+      dry_run:
+        description: 'Validate only (no writes)'
+        required: true
+        type: boolean
+        default: true
+      repositories:
+        description: 'Comma-separated repository names (without owner). Required for sandbox unless defaults are configured.'
+        required: false
+        type: string
 
 permissions:
   contents: read
   issues: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      target_env: ${{ steps.resolve.outputs.target_env }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      repos_json: ${{ steps.resolve.outputs.repos_json }}
+    steps:
+      - name: Resolve execution mode and repositories
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET_ENV: ${{ inputs.target_env }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_REPOSITORIES: ${{ inputs.repositories }}
+        run: |
+          set -euo pipefail
+
+          DEFAULT_PROD_REPOS='["scavenger-infra-as-code","scavenger-core-gateway","scavenger-cv-engine","scavenger-e2e-framework"]'
+          DEFAULT_SANDBOX_REPOS='[]'
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            TARGET_ENV="prod"
+            DRY_RUN="false"
+            REPOS_JSON="$DEFAULT_PROD_REPOS"
+          else
+            TARGET_ENV="${INPUT_TARGET_ENV:-sandbox}"
+            DRY_RUN="${INPUT_DRY_RUN:-true}"
+
+            if [[ -n "${INPUT_REPOSITORIES:-}" ]]; then
+              REPOS_JSON="$(jq -cn --arg list "$INPUT_REPOSITORIES" '$list | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')"
+            elif [[ "$TARGET_ENV" == "prod" ]]; then
+              REPOS_JSON="$DEFAULT_PROD_REPOS"
+            else
+              REPOS_JSON="$DEFAULT_SANDBOX_REPOS"
+            fi
+          fi
+
+          if [[ "$(jq 'length' <<< "$REPOS_JSON")" -eq 0 ]]; then
+            echo "::error::No repositories resolved. Provide workflow_dispatch input 'repositories' (comma-separated)."
+            exit 1
+          fi
+
+          echo "target_env=$TARGET_ENV" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN" >> "$GITHUB_OUTPUT"
+          echo "repos_json=$REPOS_JSON" >> "$GITHUB_OUTPUT"
+
   sync-labels:
+    needs: prepare
+    environment: ${{ needs.prepare.outputs.target_env == 'prod' && 'production' || 'sandbox' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        repo:
-          - scavenger-infra-as-code
-          - scavenger-core-gateway
-          - scavenger-cv-engine
-          - scavenger-e2e-framework
+        repo: ${{ fromJSON(needs.prepare.outputs.repos_json) }}
 
     steps:
       - name: Sync labels in ${{ matrix.repo }}
@@ -30,14 +93,35 @@ jobs:
           GH_TOKEN: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           SOURCE_REPO: Logika-Sciuro/.github
           TARGET_REPO: Logika-Sciuro/${{ matrix.repo }}
+          DRY_RUN: ${{ needs.prepare.outputs.dry_run }}
         run: |
           set -euo pipefail
 
-          echo "Cloning labels from $SOURCE_REPO to $TARGET_REPO..."
-          gh label clone "$SOURCE_REPO" --repo "$TARGET_REPO" --force
-
           SOURCE_LABELS="$(gh api --paginate "/repos/$SOURCE_REPO/labels?per_page=100")"
           TARGET_LABELS="$(gh api --paginate "/repos/$TARGET_REPO/labels?per_page=100")"
+          DRIFT=0
+
+          while IFS= read -r source_b64; do
+            source_label="$(printf '%s' "$source_b64" | base64 -d)"
+            name="$(jq -r '.name' <<< "$source_label")"
+            source_color="$(jq -r '.color | ascii_downcase' <<< "$source_label")"
+            source_description="$(jq -r '.description // ""' <<< "$source_label")"
+            target_label="$(jq -c --arg name "$name" '.[] | select(.name == $name)' <<< "$TARGET_LABELS" | head -n 1)"
+
+            if [[ -z "$target_label" ]]; then
+              echo "::warning::Missing label '$name' in $TARGET_REPO."
+              DRIFT=1
+              continue
+            fi
+
+            target_color="$(jq -r '.color | ascii_downcase' <<< "$target_label")"
+            target_description="$(jq -r '.description // ""' <<< "$target_label")"
+
+            if [[ "$source_color" != "$target_color" || "$source_description" != "$target_description" ]]; then
+              echo "::warning::Label '$name' differs in $TARGET_REPO."
+              DRIFT=1
+            fi
+          done < <(jq -r '.[] | @base64' <<< "$SOURCE_LABELS")
 
           EXTRA_LABELS="$(
             jq -r \
@@ -48,8 +132,37 @@ jobs:
               ' <<< "$TARGET_LABELS"
           )"
 
+          if [[ -n "$EXTRA_LABELS" ]]; then
+            echo "::warning::Extra labels found in $TARGET_REPO:"
+            echo "$EXTRA_LABELS"
+            DRIFT=1
+          fi
+
+          if [[ "$DRY_RUN" == "true" ]]; then
+            if [[ "$DRIFT" -eq 0 ]]; then
+              echo "Dry-run validation passed for $TARGET_REPO."
+              exit 0
+            fi
+
+            echo "::error::Dry-run detected label drift in $TARGET_REPO."
+            exit 1
+          fi
+
+          echo "Applying labels from $SOURCE_REPO to $TARGET_REPO..."
+          gh label clone "$SOURCE_REPO" --repo "$TARGET_REPO" --force
+
+          TARGET_LABELS="$(gh api --paginate "/repos/$TARGET_REPO/labels?per_page=100")"
+          EXTRA_LABELS="$(
+            jq -r \
+              --argjson source "$SOURCE_LABELS" \
+              '([ $source[].name ] | unique) as $sourceNames
+               | [ .[].name | select(. as $label | ($sourceNames | index($label) | not)) ]
+               | unique[]
+              ' <<< "$TARGET_LABELS"
+          )"
+
           if [[ -z "$EXTRA_LABELS" ]]; then
-            echo "No extra labels found in $TARGET_REPO."
+            echo "No extra labels to delete in $TARGET_REPO."
             exit 0
           fi
 
