@@ -1,40 +1,32 @@
-name: Java Build
+name: Java Build (Reusable)
 
 on:
   workflow_call:
     inputs:
       java-version:
+        description: 'Java version to use'
         required: false
         type: string
         default: '21'
-      maven-version:
+      maven-args:
+        description: 'Additional Maven CLI arguments'
         required: false
         type: string
-        default: '3.9.x'
-      check-name:
-        required: false
-        type: string
-        default: 'build'
+        default: ''
 
 jobs:
   build:
-    name: ${{ inputs.check-name }}
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Set up JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java-version }}
-          distribution: 'temurin'
+          distribution: temurin
           cache: maven
 
-      - name: Build with Maven
-        run: mvn clean package -DskipTests
-
-      - name: Run tests
-        run: mvn test
-
-      - name: Run code quality checks
-        run: mvn verify
+      - name: Build and test with Maven
+        run: mvn --batch-mode --no-transfer-progress verify ${{ inputs.maven-args }}
