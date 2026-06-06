@@ -1,31 +1,98 @@
 name: Sync Sprints (Milestones)
 
 on:
-  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sync-sprints-milestones.yml'
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - sandbox
+          - prod
+        default: sandbox
+      dry_run:
+        description: 'Validate only (no writes)'
+        required: true
+        type: boolean
+        default: true
+      repositories:
+        description: 'Comma-separated repository names (without owner). Required for sandbox unless defaults are configured.'
+        required: false
+        type: string
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      target_env: ${{ steps.resolve.outputs.target_env }}
+      dry_run: ${{ steps.resolve.outputs.dry_run }}
+      repos_json: ${{ steps.resolve.outputs.repos_json }}
+    steps:
+      - name: Resolve execution mode and repositories
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TARGET_ENV: ${{ inputs.target_env }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_REPOSITORIES: ${{ inputs.repositories }}
+        run: |
+          set -euo pipefail
+
+          DEFAULT_PROD_REPOS='["scavenger-infra-as-code","scavenger-core-gateway","scavenger-cv-engine","scavenger-e2e-framework"]'
+          DEFAULT_SANDBOX_REPOS='[]'
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            TARGET_ENV="prod"
+            DRY_RUN="false"
+            REPOS_JSON="$DEFAULT_PROD_REPOS"
+          else
+            TARGET_ENV="${INPUT_TARGET_ENV:-sandbox}"
+            DRY_RUN="${INPUT_DRY_RUN:-true}"
+
+            if [[ -n "${INPUT_REPOSITORIES:-}" ]]; then
+              REPOS_JSON="$(jq -cn --arg list "$INPUT_REPOSITORIES" '$list | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')"
+            elif [[ "$TARGET_ENV" == "prod" ]]; then
+              REPOS_JSON="$DEFAULT_PROD_REPOS"
+            else
+              REPOS_JSON="$DEFAULT_SANDBOX_REPOS"
+            fi
+          fi
+
+          if [[ "$(jq 'length' <<< "$REPOS_JSON")" -eq 0 ]]; then
+            echo "::error::No repositories resolved. Provide workflow_dispatch input 'repositories' (comma-separated)."
+            exit 1
+          fi
+
+          echo "target_env=$TARGET_ENV" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN" >> "$GITHUB_OUTPUT"
+          echo "repos_json=$REPOS_JSON" >> "$GITHUB_OUTPUT"
+
   sync-milestones:
+    needs: prepare
+    environment: ${{ needs.prepare.outputs.target_env == 'prod' && 'production' || 'sandbox' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        repo:
-          - scavenger-infra-as-code
-          - scavenger-core-gateway
-          - scavenger-cv-engine
-          - scavenger-e2e-framework
+        repo: ${{ fromJSON(needs.prepare.outputs.repos_json) }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Create PoC Milestones via GitHub CLI
+      - name: Sync PoC milestones via GitHub CLI
         env:
           GH_TOKEN: ${{ secrets.ORG_PAT_ISSUES_WRITE }}
           REPO: Logika-Sciuro/${{ matrix.repo }}
+          DRY_RUN: ${{ needs.prepare.outputs.dry_run }}
         run: |
+          set -euo pipefail
           FAILED=0
 
           MILESTONES=(
@@ -34,13 +101,53 @@ jobs:
             "Sprint 3 - Caminho Frio & Validação E2E|2026-06-04T23:59:59Z|Provar a resiliência da arquitetura sob carga maciça e integração paralela do framework de QA"
           )
 
+          EXISTING_MILESTONES="$(gh api --paginate "/repos/$REPO/milestones?state=all&per_page=100")"
+
           for MILESTONE in "${MILESTONES[@]}"; do
             IFS='|' read -r TITLE DUE_DATE DESC <<< "$MILESTONE"
 
-            echo "Evaluating milestone: '$TITLE' in $REPO..."
+            echo "Synchronizing milestone: '$TITLE' in $REPO..."
 
-            if gh api --paginate "/repos/$REPO/milestones?state=all&per_page=100" | jq -e --arg title "$TITLE" '.[] | select(.title == $title)' >/dev/null; then
-              echo "Milestone '$TITLE' already exists in $REPO. Skipping."
+            CURRENT="$(jq -c --arg title "$TITLE" '.[] | select(.title == $title)' <<< "$EXISTING_MILESTONES" | head -n 1)"
+            MILESTONE_NUMBER="$(jq -r '.number // empty' <<< "$CURRENT")"
+
+            if [[ -n "$MILESTONE_NUMBER" ]]; then
+              CURRENT_DUE="$(jq -r '.due_on // ""' <<< "$CURRENT")"
+              CURRENT_DESC="$(jq -r '.description // ""' <<< "$CURRENT")"
+              CURRENT_STATE="$(jq -r '.state // ""' <<< "$CURRENT")"
+              NORMALIZED_CURRENT_DUE="${CURRENT_DUE/.000Z/Z}"
+              NORMALIZED_EXPECTED_DUE="${DUE_DATE/.000Z/Z}"
+              CURRENT_DUE_DATE="${NORMALIZED_CURRENT_DUE:0:10}"
+              EXPECTED_DUE_DATE="${NORMALIZED_EXPECTED_DUE:0:10}"
+
+              if [[ "$CURRENT_DUE_DATE" != "$EXPECTED_DUE_DATE" || "$CURRENT_DESC" != "$DESC" || "$CURRENT_STATE" != "open" ]]; then
+                echo "::warning::Milestone '$TITLE' differs in $REPO."
+                if [[ "$DRY_RUN" == "true" ]]; then
+                  FAILED=1
+                  continue
+                fi
+              elif [[ "$DRY_RUN" == "true" ]]; then
+                echo "Milestone '$TITLE' is already synchronized in $REPO."
+                continue
+              fi
+
+              if ! gh api \
+                --method PATCH \
+                -H "Accept: application/vnd.github+json" \
+                "/repos/$REPO/milestones/$MILESTONE_NUMBER" \
+                -f title="$TITLE" \
+                -f state="open" \
+                -f description="$DESC" \
+                -f due_on="$DUE_DATE"; then
+                echo "::error::Failed to update milestone '$TITLE' in $REPO."
+                FAILED=1
+              fi
+              continue
+            fi
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "::warning::Milestone '$TITLE' is missing in $REPO."
+              FAILED=1
               continue
             fi
 
