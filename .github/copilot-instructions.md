@@ -14,10 +14,11 @@ Este repositório contém os **padrões organizacionais** da Logika-Sciuro. Muda
 
 ## Convenções de commit
 
-Sempre seguir `.github/instructions/commit.instructions.md`:
-- Formato: `<tipo>(<escopo>): <descrição em inglês, minúscula, sem ponto final>`
-- Branch: `github/feature/<nome>` ou `github/fix/<nome>`
-- Exemplos: `docs: update pr-reviewer agent flow`, `feat(agents): add new onboarding agent`
+**Fonte de verdade: `.github/instructions/commit.instructions.md`**
+
+Este arquivo define todos os tipos de commit, escopos, formato de descrição, body, footer e exemplos concretos. Sempre consulte este arquivo antes de criar commits em qualquer repositório da organização.
+
+Não repita regras de commit aqui — mantenha esta instrução como gateway para o arquivo oficial.
 
 ## Ao editar agents (`.github/agents/*.agent.md`)
 

@@ -31,8 +31,9 @@ Repositório central de padrões da organização **Logika-Sciuro**. Define temp
 ## Padrões organizacionais
 
 ### Commits
-Seguir Conventional Commits conforme `.github/instructions/commit.instructions.md`.
-Formato: `<tipo>(<escopo>): <descrição em inglês, minúscula, sem ponto final>`
+**Fonte de verdade: `.github/instructions/commit.instructions.md`**
+
+Todos os commits devem seguir Conventional Commits conforme definido no arquivo de instrução. Verifique sempre esse arquivo para tipos, escopos, formato de descrição, body e footer.
 
 ### Branches
 Prefixo obrigatório: `github/feature/<nome>` ou `github/fix/<nome>`
@@ -41,8 +42,8 @@ Prefixo obrigatório: `github/feature/<nome>` ou `github/fix/<nome>`
 Template em `.github/pull_request_template.md`. Seções obrigatórias: Resumo, Contexto, Mudanças, Como validar, Impactos, Checklist.
 
 ### Agentes disponíveis
-- `commit-pr-generator.agent.md` — gera commits atômicos e PRs Draft seguindo o fluxo documentado
-- `pr-reviewer.agent.md` — revisa PRs com checklist técnico; lê `AGENT.md` e `pr-instructions.md` do repositório alvo
+- `commit-pr-generator.agent.md` — gera commits atômicos e PRs Draft; **consulta `.github/instructions/commit.instructions.md` para validação de formato**
+- `pr-reviewer.agent.md` — revisa PRs com checklist técnico; lê `AGENT.md`, `pr-instructions.md` e `commit.instructions.md` do repositório alvo
 
 ## O que NÃO fazer
 
