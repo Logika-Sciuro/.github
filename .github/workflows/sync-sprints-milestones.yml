@@ -117,8 +117,10 @@ jobs:
               CURRENT_STATE="$(jq -r '.state // ""' <<< "$CURRENT")"
               NORMALIZED_CURRENT_DUE="${CURRENT_DUE/.000Z/Z}"
               NORMALIZED_EXPECTED_DUE="${DUE_DATE/.000Z/Z}"
+              CURRENT_DUE_DATE="${NORMALIZED_CURRENT_DUE:0:10}"
+              EXPECTED_DUE_DATE="${NORMALIZED_EXPECTED_DUE:0:10}"
 
-              if [[ "$NORMALIZED_CURRENT_DUE" != "$NORMALIZED_EXPECTED_DUE" || "$CURRENT_DESC" != "$DESC" || "$CURRENT_STATE" != "open" ]]; then
+              if [[ "$CURRENT_DUE_DATE" != "$EXPECTED_DUE_DATE" || "$CURRENT_DESC" != "$DESC" || "$CURRENT_STATE" != "open" ]]; then
                 echo "::warning::Milestone '$TITLE' differs in $REPO."
                 if [[ "$DRY_RUN" == "true" ]]; then
                   FAILED=1
