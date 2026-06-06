@@ -1,0 +1,38 @@
+name: MkDocs Build
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        required: false
+        type: string
+        default: '20'
+      check-name:
+        required: false
+        type: string
+        default: 'docs'
+
+jobs:
+  build:
+    name: ${{ inputs.check-name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build MkDocs
+        run: |
+          pip install mkdocs mkdocs-material
+          mkdocs build --strict
+
+      - name: Check documentation structure
+        run: |
+          test -d site && echo "✓ Documentation built successfully" || (echo "✗ Documentation build failed"; exit 1)
