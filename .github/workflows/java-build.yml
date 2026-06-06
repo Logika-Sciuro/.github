@@ -1,0 +1,32 @@
+name: Java Build (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: 'Java version to use'
+        required: false
+        type: string
+        default: '21'
+      maven-args:
+        description: 'Additional Maven CLI arguments'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ inputs.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build and test with Maven
+        run: mvn --batch-mode --no-transfer-progress verify ${{ inputs.maven-args }}
