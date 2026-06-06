@@ -1,4 +1,4 @@
-name: Java Build (Reusable)
+﻿name: Java Build (Reusable)
 
 on:
   workflow_call:
@@ -21,12 +21,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Detect Maven project
+        id: pom
+        shell: bash
+        run: |
+          if find . -name "pom.xml" -maxdepth 4 | grep -q .; then
+            echo "cache=maven" >> "$GITHUB_OUTPUT"
+          else
+            echo "cache=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up JDK ${{ inputs.java-version }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java-version }}
           distribution: temurin
-          cache: maven
+          cache: ${{ steps.pom.outputs.cache }}
 
       - name: Build and test with Maven
         run: mvn --batch-mode --no-transfer-progress verify ${{ inputs.maven-args }}
