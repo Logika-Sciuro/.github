@@ -71,22 +71,37 @@ jobs:
 ---
 
 ### MkDocs Build (`mkdocs-build.yml`)
-Builds and validates MkDocs documentation.
+Builds and validates MkDocs documentation. Optionally deploys to GitHub Pages.
 
 **Inputs**:
 ```yaml
-node-version:      '20'      # Node.js version
-check-name:        'docs'    # Name of the check
+python-version:    '3.x'     # Python version to use
+check-name:        'docs'    # Name of the check (for branch protection)
+deploy:            false      # Set to true to deploy to GitHub Pages
 ```
 
-**Usage**:
+**Usage** (CI validation only):
 ```yaml
 jobs:
   docs:
     uses: logika-sciuro/.github/.github/workflows/mkdocs-build.yml@main
     with:
-      node-version: '20'
       check-name: 'docs'
+```
+
+**Usage** (with GitHub Pages deployment):
+```yaml
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  docs:
+    uses: logika-sciuro/.github/.github/workflows/mkdocs-build.yml@main
+    with:
+      check-name: 'docs'
+      deploy: ${{ github.event_name == 'push' }}
 ```
 
 ---
@@ -143,8 +158,8 @@ When using these shared workflows, ensure your repository has:
 - Optional: `.tfvars` files for variable configuration
 
 ### Documentation Projects
-- `package.json` and `mkdocs.yml` in repository root
-- `npm install` must install MkDocs (via `pip` or `npm` scripts)
+- `mkdocs.yml` in repository root
+- No local MkDocs installation required — the pipeline installs it automatically
 
 ---
 

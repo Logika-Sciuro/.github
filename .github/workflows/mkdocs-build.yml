@@ -3,14 +3,18 @@ name: MkDocs Build
 on:
   workflow_call:
     inputs:
-      node-version:
+      python-version:
         required: false
         type: string
-        default: '20'
+        default: '3.x'
       check-name:
         required: false
         type: string
         default: 'docs'
+      deploy:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -18,21 +22,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: ${{ inputs.node-version }}
-          cache: 'npm'
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: npm install
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
 
-      - name: Build MkDocs
-        run: |
-          pip install mkdocs mkdocs-material
-          mkdocs build --strict
+      - name: Install MkDocs Material
+        run: pip install mkdocs-material
 
-      - name: Check documentation structure
-        run: |
-          test -d site && echo "✓ Documentation built successfully" || (echo "✗ Documentation build failed"; exit 1)
+      - name: Build documentation
+        run: mkdocs build --strict
+
+      - name: Upload pages artifact
+        if: ${{ inputs.deploy }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy:
+    name: deploy
+    if: ${{ inputs.deploy }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
