@@ -1,0 +1,45 @@
+name: Reusable - Terraform Validate
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        description: 'Root directory to search for Terraform root modules (directories containing main.tf)'
+        type: string
+        default: '.'
+      terraform_version:
+        description: 'Terraform version constraint (e.g. 1.9)'
+        type: string
+        default: '1.9'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+        working-directory: ${{ inputs.working_directory }}
+
+      - name: Init and Validate root modules
+        run: |
+          set -euo pipefail
+          modules=$(find . -name "main.tf" -printf '%h\n' | sort -u)
+          if [ -z "$modules" ]; then
+            echo "No Terraform root modules found under $(pwd)."
+            exit 0
+          fi
+          echo "$modules" | while IFS= read -r dir; do
+            echo "::group::Validating $dir"
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            echo "::endgroup::"
+          done
+        working-directory: ${{ inputs.working_directory }}
