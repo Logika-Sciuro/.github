@@ -2,7 +2,7 @@
 name: Feature Request
 about: Propor uma nova funcionalidade, componente ou evolução arquitetural para a plataforma.
 title: 'feat: [Módulo] Breve descrição'
-labels: 'type: feature'
+type: '✨ Feature'
 assignees: ''
 ---
 
